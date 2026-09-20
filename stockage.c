@@ -1,39 +1,35 @@
-// CODE SUR LA CARTE 1 : GESTION DU STOCKAGE
-const int capteurBatterie = A0; 
-const int brocheSignalEnvoi = 3; // Fil relié à la broche D2 de la Carte 2
+// Définition des broches (Pins)
+const int BROCHE_LDR = A0;  // Le capteur de lumière (LDR) est branché sur la broche analogique A0
+const int BROCHE_LED = 3;   // La LED est branchée sur la broche numérique 3 (compatible PWM si besoin)
 
-const float SEUIL_CRITIQUE = 4.8; 
-const float SEUIL_OK = 5.2;       
-bool autorisationDistribution = false;
+// Seuil de luminosité (À ajuster selon votre pièce)
+// La valeur lue varie entre 0 (noir total) et 1023 (pleine lumière)
+const int SEUIL_NUIT = 300; 
 
 void setup() {
-  pinMode(brocheSignalEnvoi, OUTPUT);
-  digitalWrite(brocheSignalEnvoi, LOW);
+  // Configuration des broches
+  pinMode(BROCHE_LED, OUTPUT); // La broche de la LED est configurée en sortie
+  
+  // Initialisation du moniteur série pour afficher les valeurs à l'écran du PC
   Serial.begin(9600);
 }
 
 void loop() {
-  int valeurBrute = analogRead(capteurBatterie);
-  // Conversion en tension réelle (avec pont diviseur 10k / 4.7k)
-  float tensionBatterie = (valeurBrute * 5.0 / 1023.0) * ((10.0 + 4.7) / 4.7);
-
-  // Logique de décision de stockage
-  if (tensionBatterie > SEUIL_OK) {
-    autorisationDistribution = true;
-  } else if (tensionBatterie < SEUIL_CRITIQUE) {
-    autorisationDistribution = false;
+  // 1. Lire la valeur de la luminosité (photorésistance)
+  int luminosite = analogRead(BROCHE_LDR);
+  
+  // 2. Afficher la valeur sur le moniteur série (pratique pour le réglage)
+  Serial.print("Luminosite ambiante : ");
+  Serial.println(luminosite);
+  
+  // 3. Condition : Si la luminosité descend en dessous du seuil, il fait nuit
+  if (luminosite < SEUIL_NUIT) {
+    digitalWrite(BROCHE_LED, HIGH); // Allumer la LED
+  } 
+  else {
+    digitalWrite(BROCHE_LED, LOW);  // Éteindre la LED
   }
-
-  // Envoi de l'ordre à la Carte 2
-  if (autorisationDistribution) {
-    digitalWrite(brocheSignalEnvoi, HIGH); // Signal "OUI, tu peux distribuer"
-  } else {
-    digitalWrite(brocheSignalEnvoi, LOW);  // Signal "NON, stockage trop bas"
-  }
-
-  Serial.print("Stockage - Tension: ");
-  Serial.print(tensionBatterie);
-  Serial.println(autorisationDistribution ? " V -> Autorisation: OK" : " V -> Autorisation: NON");
-
-  delay(1000); 
+  
+  // Petite pause de 200 millisecondes avant la prochaine lecture
+  delay(200);
 }
